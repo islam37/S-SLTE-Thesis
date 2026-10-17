@@ -218,3 +218,26 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Research-specific exclusions
+.env
+.env.*
+!.env.example
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.bin
+*.parquet
+*.csv
+*.arrow
+*.pkl
+*.pickle
+*.joblib
+/data/
+/private_reference/
+/checkpoints/
+/models/
+/outputs/
+/wandb/
+/mlruns/
