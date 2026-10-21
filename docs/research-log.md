@@ -10,6 +10,53 @@
 
 ---
 
+## 2026-10-21 — Stage 2: Dataset Verification and Annotation Pilot Preparation
+
+**Reported by:** Islam Uddin (231-115-063)  
+**Team:** Islam Uddin and Md Yousuf Bin Nazib (231-115-064); Yousuf's independent review is not yet recorded  
+**Objective:** Verify persisted AG News partitions and create a reproducible 500-record pilot for LLM labeling.
+
+### Completed according to the researcher's session report
+
+- Reloaded the saved Google Drive data-partition CSV files.
+- Ran the partition verification checks and received `DATASET VERIFICATION PASSED`.
+- Selected a reproducible 500-record pilot sample from the noisy-training partition using `PILOT_SEED = 42`.
+- Saved `pilot_500.csv` in Google Drive and received `PILOT SAVE VERIFIED`.
+- Reported completing a Colab-to-GitHub notebook commit.
+
+**Files expected in Google Drive:**
+- `MyDrive/S_SLTE_Thesis/data/splits/anchor.csv`
+- `MyDrive/S_SLTE_Thesis/data/splits/development.csv`
+- `MyDrive/S_SLTE_Thesis/data/splits/noisy_training.csv`
+- `MyDrive/S_SLTE_Thesis/private_reference/noisy_reference.csv` (restricted, never provided to correction code)
+- `MyDrive/S_SLTE_Thesis/data/pilot/pilot_500.csv` (record ID and text only)
+
+### Independent repository review / outstanding issue
+
+During a GitHub check on 2026-10-21, the `main` branch notebook at `notebooks/01_dataset_preparation.ipynb` still contained the earlier dataset-splitting code **without** the new verification and pilot-sampling cells. Thus the latest notebook commit is **not independently verified at that canonical repository path**. It may have been committed under another path or not synchronized.
+
+**Required follow-up:** In Colab, verify the current notebook includes the Stage 2 cells; save it to `main` at `notebooks/01_dataset_preparation.ipynb`; open GitHub to confirm it contains the pilot code. Avoid adding credentials or private-reference labels to notebook outputs.
+
+### Scientific significance
+
+- Independent reload and assertions reduce the risk of silently missing or overlapping data partitions.
+- Fixed-seed pilot sampling makes the preliminary LLM annotation study reproducible.
+- Keeping the original reference labels out of the pilot protects against label leakage.
+- All 500 pilot items are **unlabeled by an LLM at this stage**; these actions do not measure LLM accuracy or demonstrate S-SLTE performance.
+
+### Next actions
+
+1. Reconcile Colab with the GitHub notebook path and confirm the Stage 2 code is committed.
+2. Prepare `notebooks/02_llm_annotation.ipynb` and check Colab GPU/VRAM.
+3. Establish authorized access to the intended LLM annotator or document a supervisor-approved fallback.
+4. Freeze a zero-shot prompt, class-label mapping, generation settings and parsing policy.
+5. Run a 10-example inference **smoke test**, inspect invalid outputs and persist the annotation batches with record IDs.
+6. Update this log after actual model inference; do not infer experiment results in advance.
+
+**Status:** Dataset and pilot completion user-reported; GitHub synchronization requires confirmation; LLM inference not yet started.
+
+---
+
 ## 2026-10-17 — Day 01: Environment Setup and AG News Data Preparation
 
 **Primary work recorded for:** Islam Uddin (231-115-063)  
