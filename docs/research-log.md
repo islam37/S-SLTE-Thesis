@@ -10,6 +10,56 @@
 
 ---
 
+## 2026-10-22 — Stage 3: LLM Access, Environment Setup, and 10-Record Smoke Test
+
+**Reported by:** Islam Uddin (231-115-063)  
+**Model:** `meta-llama/Llama-3.1-8B-Instruct`  
+**Compute:** Google Colab, NVIDIA Tesla T4 (14.56 GB total VRAM)  
+**Objective:** Verify authorized model access, run zero-shot AG News classification, and confirm robust output parsing and persistence.
+
+### Reported completed work
+
+1. Hugging Face model-access request was approved; `HF_TOKEN` was stored in Colab Secrets rather than embedded in committed code.
+2. Diagnosed and resolved Colab package version conflicts; the researcher reported `transformers==5.20.1`, `huggingface_hub==1.33.0`, and a successful dependency check after environment repair. These are **observed runtime versions**, not yet a frozen environment manifest.
+3. Loaded Meta Llama 3.1 8B Instruct on the Tesla T4 using 4-bit NF4 quantization. The researcher reported **5.32 GB allocated GPU memory**, with approximately **9.0 GB free** after loading.
+4. Defined a four-class zero-shot news categorization prompt with strict JSON response format and validated a JSON parser that rejects malformed or out-of-range responses.
+5. Saved and verified the annotation protocol in Google Drive; a previously existing protocol is preserved rather than silently overwritten.
+6. Ran the first inference on AG News training record `43`. The model returned `{"label": 0}` (World); the parser accepted it, and the first-prediction JSON file was reportedly saved and verified.
+7. Ran a **10-record smoke test** from the fixed pilot sample, saving individual JSON prediction files in Google Drive. All 10 responses parsed as valid JSON category labels (**10/10 valid; 0 invalid**).
+
+### Reported smoke-test predictions
+
+| Record ID | Predicted label | Predicted class | JSON valid |
+| ---: | ---: | --- | --- |
+| 43 | 0 | World | Yes |
+| 188 | 3 | Sci/Tech | Yes |
+| 765 | 1 | Sports | Yes |
+| 913 | 1 | Sports | Yes |
+| 926 | 0 | World | Yes |
+| 932 | 0 | World | Yes |
+| 1107 | 3 | Sci/Tech | Yes |
+| 1117 | 3 | Sci/Tech | Yes |
+| 1260 | 0 | World | Yes |
+| 1262 | 1 | Sports | Yes |
+
+### Interpretation and important boundaries
+
+- **10/10 JSON-valid responses measure formatting compliance, not classification accuracy.** The true/reference labels were not used for these predictions.
+- The GPU load, inference results, and Google Drive output files were reported through the Colab session; a separate end-to-end reproduction and direct Drive file inspection have **not** yet been performed.
+- The annotation model repository's **exact model revision SHA** and complete package environment should be recorded before treating the 500-record pilot as a reproducible experiment.
+- There are no S-SLTE label corrections, noise-detection scores, or downstream classification results yet.
+- The GitHub notebook `notebooks/02_llm_annotation.ipynb` has not yet been verified to contain today's actual inference and 10-record smoke-test cells at the time of this log update.
+
+### Next actions
+
+1. Verify the 10 persisted prediction files, their IDs, JSON validity, and matching prompt hashes.
+2. Record the exact model revision, library versions, and the fixed pilot input list; avoid any changes to the frozen prompt during the pilot.
+3. Save the updated Colab notebook to `notebooks/02_llm_annotation.ipynb` and verify the GitHub copy.
+4. Run a checkpointed 500-record pilot, treating invalid answers as invalid rather than relabeling them by hand.
+5. Inspect results and evaluate annotation disagreements only **after** producing the predictions, without feeding reference labels into the inference pipeline.
+
+---
+
 ## 2026-10-21 — Stage 2: Dataset Verification and Annotation Pilot Preparation
 
 **Reported by:** Islam Uddin (231-115-063)  
