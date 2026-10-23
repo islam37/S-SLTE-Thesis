@@ -10,6 +10,74 @@
 
 ---
 
+## 2026-10-23 — Stage 4: Pinned LLM Pilot and Preliminary Noise Evaluation
+
+**Reported by:** Islam Uddin (231-115-063).  
+**Model:** `meta-llama/Llama-3.1-8B-Instruct`  
+**Pinned revision:** `0e9e39f249a16976918f6564b8830bc894c89659`  
+**Dataset:** AG News; 500 random records (seed 42) from the 16,200-record noisy-training partition. Reference labels excluded from model input.
+
+### Completed work
+
+1. Saved model revision, pilot-data SHA256, prompt fingerprint, generation settings and package metadata. Retained the initial manifest and wrote `llm_pilot_manifest_v2.json` to correct the previously missing `bitsandbytes==0.50.2` version.
+2. Loaded the revision-pinned Llama tokenizer and 4-bit NF4 model on a Colab Tesla T4 GPU.
+3. Generated five pinned-model predictions as a preliminary test. Completed the 500-record annotation pilot with **5 checkpointed predictions reused and 495 newly generated**.
+4. Verified all 500 prediction records for unique IDs, text hashes, pinned model revision, prompt fingerprint and decoding settings. **500/500 responses used valid JSON labels; 0 invalid responses.**
+5. Evaluated labels retrospectively in a separate notebook against the restricted AG News reference labels: **391 matches, 109 disagreements**, corresponding to **21.80% disagreement** (Wilson 95% CI: **18.40%–25.63%**).
+
+### Predicted class distribution
+
+| Predicted class | Count | Share |
+| --- | ---: | ---: |
+| World | 156 | 31.2% |
+| Sports | 117 | 23.4% |
+| Business | 161 | 32.2% |
+| Sci/Tech | 66 | 13.2% |
+
+### Confusion matrix (reference labels as rows; LLM predictions as columns)
+
+| Reference label | World | Sports | Business | Sci/Tech |
+| --- | ---: | ---: | ---: | ---: |
+| World | 109 | 7 | 4 | 0 |
+| Sports | 5 | 102 | 1 | 0 |
+| Business | 19 | 2 | 118 | 4 |
+| Sci/Tech | 23 | 6 | 38 | 62 |
+
+### Class-conditional disagreement
+
+| Reference class | Examples | Disagreements | Rate |
+| --- | ---: | ---: | ---: |
+| World | 120 | 11 | 9.17% |
+| Sports | 108 | 6 | 5.56% |
+| Business | 143 | 25 | 17.48% |
+| Sci/Tech | 129 | 67 | 51.94% |
+
+The largest observed disagreement concerns Sci/Tech articles (38 predicted as Business, 23 as World and 6 as Sports). This is an **exploratory class-dependent disagreement pattern**, not proof of systematic model bias or of any S-SLTE correction benefit.
+
+### Academic limitations and safeguards
+
+- JSON validity is not classification accuracy. Disagreement with a reference label is not necessarily a manually verified model error.
+- The 500-item pilot was sampled randomly rather than stratified separately; its observed disagreement cannot be generalized without further study.
+- Reference labels were consulted in the separate evaluation notebook only *after* the annotation outputs were generated. Do not feed them to the correction pipeline or tune S-SLTE hyperparameters on pilot reference labels.
+- The official AG News test set remains untouched. S-SLTE correction, comparator baselines, correction/abstention risk and downstream model results have not yet been produced.
+- Notebook code and outputs are verified in GitHub, but this entry is not a second independent runtime reproduction or direct audit of private Drive files.
+
+### Artifacts
+
+- `notebooks/02_llm_annotation.ipynb` — pinned-model pilot annotation, checkpoints and audit
+- `notebooks/03_pilot_noise_analysis.ipynb` — separate retrospective reference-label evaluation
+- Google Drive (restricted): `configs/llm_pilot_manifest_v2.json`, `outputs/llm_pilot/pinned_0e9e39f249a1/`, `private_reference/evaluation/pilot_v1/noise_summary.json`
+- Pilot CSV SHA256: `56c3d987cf681b590e8371d76a848b39ee8e3bd99c6385e598acdcfcf66b27de`
+
+### Next session
+
+1. Review representative disagreements and label ambiguity without retroactively altering the annotation protocol.
+2. Define an S-SLTE correction/abstention evaluation plan with separate development and held-out datasets.
+3. Specify a matched-rate symmetric-noise comparator and class-wise metrics.
+4. Record supervisor and collaborator review before making method-effectiveness claims.
+
+---
+
 ## 2026-10-22 — Stage 3: LLM Access, Environment Setup, and 10-Record Smoke Test
 
 **Reported by:** Islam Uddin (231-115-063)  
