@@ -10,6 +10,73 @@
 
 ---
 
+## 2026-10-24 — Stage 5: Class-Dependent Error Analysis and S-SLTE Evaluation Protocol Draft
+
+**Reported by:** Islam Uddin (231-115-063).  
+**Project:** Evaluating Semantic-Neighborhood Label Correction for LLM-Generated Noise in Text Classification  
+**Evidence:** Connected GitHub notebook `notebooks/04_pilot_error_patterns.ipynb` (commit `669dcc617e2e256658b4445b66400348096d72be`), including saved cell outputs. The private Drive files were not independently re-executed or fetched in this GitHub review.
+
+### Completed work and observed results
+
+1. Revisited the frozen 500-record AG News pilot labels from the revision-pinned Llama annotation run; performed retrospective error-pattern analysis separately from LLM inference and S-SLTE correction. Verified 500 records and 109 disagreements against AG News reference labels, consistent with the prior 21.80% preliminary disagreement estimate.
+2. Computed the **class-conditional label-transition matrix**, class-wise counts, disagreements, and ordered directional transitions. The notebook reported `CLASS-DEPENDENT ANALYSIS COMPLETED`, and the aggregate tables were saved to the restricted Google Drive evaluation directory.
+3. Saved `configs/s_slte_evaluation_protocol_draft_v1.json` on Google Drive, with **12 planned metrics** and proposed `retain`, `correct`, `abstain` decisions. Its status is explicitly **`DRAFT_REQUIRES_REVIEW`**.
+4. Saved `configs/s_slte_metrics_draft_v1.json` on Google Drive, defining **seven mutually exclusive candidate outcome categories** and **nine formula/count entries**. The metrics document also remains **`DRAFT_REQUIRES_REVIEW`**.
+5. Executed an initial seven-example **synthetic metric consistency unit test**, one example per outcome category. The notebook reported `S-SLTE METRIC CONSISTENCY TEST PASSED`, including explicit handling of zero denominators. This verifies the worked synthetic examples, **not** the correction method's real-world effectiveness.
+
+### Class-dependent pilot observations
+
+| Reference class | Reference records | Disagreements | Within-class rate |
+| --- | ---: | ---: | ---: |
+| World | 120 | 11 | 9.17% |
+| Sports | 108 | 6 | 5.56% |
+| Business | 143 | 25 | 17.48% |
+| Sci/Tech | 129 | 67 | 51.94% |
+| **Total** | **500** | **109** | **21.80%** |
+
+Most frequent directional disagreements:
+
+| Reference → LLM | Count | Percent of reference class |
+| --- | ---: | ---: |
+| Sci/Tech → Business | 38 | 29.46% |
+| Sci/Tech → World | 23 | 17.83% |
+| Business → World | 19 | 13.29% |
+| World → Sports | 7 | 5.83% |
+| Sci/Tech → Sports | 6 | 4.65% |
+
+The Sci/Tech class accounts for **67/109 (61.47%)** of observed disagreements. This is a descriptive pattern in the exploratory pilot, not confirmation of systematic bias, manually adjudicated errors, or any improvement attributable to S-SLTE.
+
+### Proposed outcome taxonomy (not yet finalized)
+
+- **B**: wrong original label corrected to the reference label (beneficial).
+- **H**: correct original label changed to an incorrect label (harmful).
+- **U**: incorrect original label changed to another incorrect label (unsuccessful).
+- **RC / RW**: originally correct / wrong label retained without change.
+- **AC / AW**: originally correct / wrong label abstained from automatic acceptance.
+
+Proposed evaluation: correction precision `B/(B+H+U)`, harmful-correction share `H/(B+H+U)`, abstention rate `(AC+AW)/N`, coverage `(N-AC-AW)/N`, and error rate on accepted records `(RW+H+U)/(N-AC-AW)`. All such rates must state their denominator and use an undefined/null result for an empty denominator. Original error rate in this taxonomy is `(B+U+RW+AW)/N`. These are draft definitions rather than final supervisor-approved metrics.
+
+**Synthetic test results (7 artificial records):** correction precision 0.3333, harmful-correction share 0.3333, abstention rate 0.2857, coverage 0.7143, accepted error rate 0.6000, original error rate 0.5714; zero-denominator handling passed. The test uses **synthetic labels only**.
+
+### Research safeguards and open points
+
+- Keep retrospective reference labels out of LLM inference, S-SLTE score computation, and correction-threshold selection; do not tune on the exploratory 500-record pilot's reference labels.
+- Use the independent development partition for appropriate method selection, and reserve strictly held-out evaluation data; the official AG News test split is for the final downstream task.
+- Report coverage alongside accepted error rate, and distinguish beneficial, harmful, unsuccessful and abstained cases.
+- The current synthetic test confirms only simple arithmetic/outcome classification paths. It does not yet test larger randomized cases, invalid decisions, metric sensitivity, or downstream performance.
+- Draft metrics still need precise operational definitions for noise-detection precision/recall/F1, risk at coverage, class-wise outcomes, and downstream macro-F1; the proposed abstention/training policy also requires review.
+- No S-SLTE correction or abstention predictions, baseline comparisons, effectiveness gains or confirmatory claims have been made.
+- Supervisor feedback and independent teammate review are not yet documented.
+
+### Artifacts and next steps
+
+- GitHub: [`notebooks/04_pilot_error_patterns.ipynb`](../notebooks/04_pilot_error_patterns.ipynb) (commit `669dcc617e2e256658b4445b66400348096d72be`).
+- Restricted Google Drive drafts: `configs/s_slte_evaluation_protocol_draft_v1.json`; `configs/s_slte_metrics_draft_v1.json`.
+- Restricted Google Drive aggregate analysis: `private_reference/evaluation/pilot_v1/classwise_disagreement.csv` and `label_transitions.csv`.
+- Next: review and freeze the evaluation protocol with supervisor input; define matched-rate symmetric-noise experiments and safeguard against data leakage; implement a robust correction outcome evaluator and stronger synthetic tests; proceed to S-SLTE implementation only after experimental design is adequately specified.
+
+---
+
 ## 2026-10-23 — Stage 4: Pinned LLM Pilot and Preliminary Noise Evaluation
 
 **Reported by:** Islam Uddin (231-115-063).  
