@@ -75,6 +75,23 @@ Proposed evaluation: correction precision `B/(B+H+U)`, harmful-correction share 
 - Restricted Google Drive aggregate analysis: `private_reference/evaluation/pilot_v1/classwise_disagreement.csv` and `label_transitions.csv`.
 - Next: review and freeze the evaluation protocol with supervisor input; define matched-rate symmetric-noise experiments and safeguard against data leakage; implement a robust correction outcome evaluator and stronger synthetic tests; proceed to S-SLTE implementation only after experimental design is adequately specified.
 
+### Extra session — fixed-count symmetric noise generator (synthetic validation)
+
+**Notebook:** [`notebooks/05_symmetric_noise_baseline.ipynb`](../notebooks/05_symmetric_noise_baseline.ipynb)  
+**Verified notebook commit:** `0d8d571cec896945394edd8dfaa8cda032744fb1`  
+**Scope:** Synthetic validation only; no AG News rows or restricted reference labels were loaded in this notebook.
+
+1. Implemented `inject_symmetric_noise(clean_labels, noise_rate, seed, num_classes)`. It selects a fixed number `round(N * noise_rate)` of examples without replacement and replaces each selected label uniformly with one of the other `num_classes - 1` labels using a nonzero modular offset. Fixed seed enables deterministic repeat runs. For `N=500`, four classes, and `noise_rate=0.218`, exactly **109 labels** were changed (**21.80%**). The original labels are not retained for selected examples.
+2. Tested 500 balanced synthetic records (125 per class), exact flip count, absence of self-label transitions, valid class values, identical-seed reproducibility, and rejection of an invalid rate.
+3. Executed **200 seed-specific synthetic trials**, each with 500 records and 109 flips; **21,800 flips** in aggregate. Incorrect-label modular offsets 1, 2, 3 occurred **7,170**, **7,418**, **7,212** times respectively, corresponding to **0.328899**, **0.340275**, **0.330826** of total flips; each theoretically has probability 1/3 under this implementation. The maximum absolute empirical deviation from 1/3 was **0.0069**, below the diagnostic tolerance of **0.035**.
+4. The committed notebook reports `SYMMETRIC NOISE GENERATOR TEST PASSED` and `SYMMETRIC NOISE FAIRNESS TEST PASSED`. Saved outputs contain no per-record reference labels, and no common credential patterns were detected in the reviewed notebook.
+
+**Interpretation and limitations:** This is a **fixed-count** corruption generator with uniform replacement among the incorrect classes. Unlike independent Bernoulli corruption per record, the total count is fixed, so individual corruption selections are not independent within a run. Equal probabilities do **not** imply exactly equal observed class-wise corruption rates. The 200-run check is a diagnostic, not a formal statistical significance test, independent ground-truth evaluation, or demonstration that S-SLTE is effective. No real matched-rate baseline has been run.
+
+**Protocol safeguard:** The exploratory 500-record pilot's **21.80% reference-label disagreement** is used here solely as a motivating nominal synthetic test rate. It is not a proven noise rate for all 16,200 records. Before any comparable real-data noise experiment, explicitly specify the reference-label access boundary, record matching, clean source of labels, seeds, target-rate selection without peeking at protected evaluation labels, control conditions, and sensitivity analysis across several rates.
+
+**Next:** Review the draft evaluation protocol, formalize legitimate clean-label sources for synthetic corruption, define matched-rate comparator experiments and held-out evaluation boundaries, then implement robust baselines and the proposed S-SLTE correction pipeline.
+
 ---
 
 ## 2026-10-23 — Stage 4: Pinned LLM Pilot and Preliminary Noise Evaluation
