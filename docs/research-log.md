@@ -10,6 +10,27 @@
 
 ---
 
+## 2026-10-25 — Stage 6: Proposed Holdout and Duplicate Screening
+
+**Researcher:** Islam Uddin (231-115-063)  
+**Verified notebook:** [`notebooks/06_matched_rate_protocol.ipynb`](../notebooks/06_matched_rate_protocol.ipynb) (commit `6c8516e2dd2c914bcece8292d8a1714ce0f0be3c`). Saved notebook outputs were checked; experiments were not independently rerun.
+
+### Completed and observed
+- Revalidated AG News partitions: 2,000 anchor, 1,800 development, 16,200 noisy training, and 500 exploratory pilot. Record-ID disjointness, pilot subset, and reference-label omission from noisy inputs passed.
+- According to notebook output, created a **draft** `configs/matched_rate_noise_protocol_draft_v1.json` on Google Drive. Proposed rates: 10%, 20%, 30% plus exploratory 21.8%; no real matched-rate experiment executed.
+- Deterministically selected a **proposed, unsaved and unfrozen** 2,000-record correction holdout from the noisy pool excluding pilot (seed `20261025`), leaving 13,700 training records. Holdout selection ID SHA256: `37bd15b5fb600e7cfc392c936fcb187b0a39313c3502098c0e6a403153057051`.
+- Normalized exact-text audit found two cross-split collisions (anchor–training, development–training) and two internal training duplicates. A **candidate, unsaved** training view excluded IDs `9266`, `43231`, `68708`, `79605`, yielding **13,696** records. Candidate ID SHA256: `52176ba0a8d8d43415ff34c083f75de26f9db05b73458893a23413998aa28b88`. Original split CSVs were not changed.
+- Text-only TF-IDF screening compared 2,000 candidate holdout records to 17,996 non-holdout records. Initial top-1 audit found **18** scores at least 0.95 and **57** at least 0.85; no normalized exact-text holdout overlaps. Of the 57 pairs, **15** satisfied both additional sequence and Jaccard screening criteria.
+- Expanded to five nearest neighbors per holdout: **63 candidate pairs at similarity ≥0.85 involving 57 unique holdout IDs**, with 6 holdouts having multiple flagged matches. Pair counts by comparison split: training 45, anchor 7, development 9, pilot 2. Five protected-split article pairs appeared near-identical upon preliminary textual comparison, but independent human review is pending.
+
+### Scientific limits and continuation
+- Similarity flags are **not confirmed duplicates**, and top-five screening cannot guarantee independence or catch all near-duplicates; within-holdout near-duplicate review remains undone.
+- No private reference labels or official test records were used. No S-SLTE correction effectiveness was measured. The proposed holdout and training view are **NOT frozen**, and no candidate CSV files were saved.
+- The committed notebook contains five illustrative full article texts in its diagnostic outputs; review and clear unnecessary article-text outputs in a future notebook revision. No common credential signatures were detected in the notebook review.
+- **Next:** apply a consistent human-review rubric to flagged pairs; develop a deterministic, leakage-aware holdout replacement policy; verify further duplicate risks; obtain methodological review before freezing partitions or training models.
+
+---
+
 ## 2026-10-24 — Stage 5: Class-Dependent Error Analysis and S-SLTE Evaluation Protocol Draft
 
 **Reported by:** Islam Uddin (231-115-063).  
