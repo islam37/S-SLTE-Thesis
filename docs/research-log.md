@@ -10,6 +10,29 @@
 
 ---
 
+## 2026-10-26 — Stage 7: Human Review Consensus and Draft Holdout Policy
+
+**Researchers:** Islam Uddin and Md Yousuf Bin Nazib.  
+**Notebook:** [`07_holdout_review_policy.ipynb`](../notebooks/07_holdout_review_policy.ipynb); verified in GitHub commit `a4d3bd4e2e664c6eedb46244cff358c7e158d043`. Saved notebook outputs and restricted Drive review files were inspected, not independently rerun.
+
+### Completed work
+- Reproduced the proposed **2,000-record holdout** and **13,696-record clean-training candidate view**, matching previous ID fingerprints. Source datasets were not modified.
+- Screened **63 external** and **8 internal** near-duplicate candidate pairs, totaling **71 edges**, **56 connected components**, and **61 flagged holdout IDs**.
+- Compared 71 reviewed pairs from two selected English-language reviewer spreadsheets stored on restricted Google Drive. **68/71 matched (95.77%); descriptive Cohen's kappa 0.8913**. The three disagreements were `PAIR-032`, `PAIR-043`, and `PAIR-057`.
+- The researchers recorded discussion consensus for those three cases: `PAIR-032=R`, `PAIR-043=F`, `PAIR-057=D`. Final **working pair-level decisions: 53 D (duplicate), 17 F (different), 1 R (related-distinct)**.
+- A non-executing candidate policy flagged **37 training-exclusion pairs (37 unique training IDs)**, **14 holdout-replacement pairs (14 unique holdout IDs)**, **2 internal-holdout pairs (4 unique holdout IDs)**, **17 no-action pairs**, and **1 related-distinct pair**. **No record was removed or replaced.**
+
+### Limitations and safeguards
+- Reviewer independence was **not verified**; prior reviewer-file history and AI-assisted exploratory assessment prohibit presenting observed agreement/kappa as validated independent inter-rater reliability. Consensus was reached through two-researcher discussion, not independent third-party adjudication.
+- TF-IDF top-five screening at threshold 0.85 is not exhaustive. Repeated HTML/advertisement text created misleading similarity candidates; further cleaning and audit are pending.
+- Restricted reference labels and the official test labels were not used in the review-policy notebook. The holdout remains **unfrozen**, with no real S-SLTE or baseline evaluation.
+- The committed notebook has saved successful outputs, but its packet-generation cells are **not fully rerun-safe** (they may overwrite draft CSVs or stop if adjudication worksheets already exist). Fix in a later revision.
+- The repository was **public** when inspected. Private reviewer workbooks and labels stay in restricted Drive; do not push them to GitHub. No common token signature was found in the examined newly committed notebook.
+
+**Next:** audit advertisement/HTML boilerplate; develop component-aware leakage policy; make notebook rerun-safe; refresh outdated README research status; freeze evaluation boundaries only after review.
+
+---
+
 ## 2026-10-25 — Stage 6: Proposed Holdout and Duplicate Screening
 
 **Researcher:** Islam Uddin (231-115-063)  
