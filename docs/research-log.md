@@ -10,6 +10,30 @@
 
 ---
 
+## 2026-10-27 — Stage 8: Boilerplate Contamination and Draft Leakage Resolution
+
+**Researcher/session execution:** Islam Uddin.  
+**Verified notebook:** [`08_boilerplate_contamination_audit.ipynb`](../notebooks/08_boilerplate_contamination_audit.ipynb), committed as [`1a19e3b1d6327d723918dae88929164a0109051b`](https://github.com/islam37/S-SLTE-Thesis/commit/1a19e3b1d6327d723918dae88929164a0109051b). The committed code and saved outputs were inspected; the Colab experiments were **not independently rerun**.
+
+### Completed analysis and observed results
+- Audited five text-only AG News partitions: **2,000 anchor, 1,800 development, 500 pilot, 2,000 proposed holdout, and 13,700 pre-deduplication training candidates**. Identified **18** advertisement-keyword matches, including **12** records with structured advertisement tails. An in-memory, experimental prefix-preserving tail-removal rule was evaluated without modifying the source texts; six non-structured uses of advertising terminology were left unchanged.
+- Compared raw and candidate-cleaned TF-IDF near-duplicate screens (word unigrams/bigrams, five neighbors per holdout, cosine threshold **0.85**). Flagged pairs decreased from **63 external + 8 internal (71 total)** to **54 external + 2 internal (56 total)**; **15** pairs disappeared and **no new pairs** crossed the threshold. All **15 disappearing pairs** matched previously recorded working human decisions of **F (different)**. One pair disappeared following corpus-level vectorizer refitting although neither article text changed; this is not evidence of direct boilerplate removal for that pair.
+- Reconstructed and text-aligned **71/71 original review pair IDs**. Among the **56** remaining candidate pairs, the prior decisions were **53 duplicate (D), 2 different (F), and 1 related-distinct (R)**. The 53 D edges formed **51 connected components**: 35 holdout–training components, 14 holdout–protected-split components, and 2 internal-holdout components.
+- Proposed a deterministic, **non-executing** resolution of these D relationships: **37 unique training exclusions** and **16 unique holdout replacements** (14 protected-split conflicts plus one replacement from each of two internal components). Proposed seed **20261027** selected 16 distinct replacement candidates. The in-memory proposal held **2,000 holdout** and **13,643 training** records. Draft holdout-ID SHA-256: `66ab8197d1396a3dca7c308cad0e2f2b13eae7a8dbda9812b2805f4cd51b4963`; draft training-ID SHA-256: `bcb8e6000c915e6e2b163072b5d308397f318a065725a6d6e914759301bd2d9a`. These fingerprints are **not final dataset manifests**.
+- Screened all 16 proposed replacement records against the **19,943-record active in-memory corpus** using both raw and candidate-cleaned TF-IDF texts. Found **zero pairs at cosine ≥0.80** and **zero exact-text collisions** in that active corpus.
+- Subsequently screened the full **2,000-record proposed holdout** against the same **19,943-record active corpus**, using candidate-cleaned TF-IDF and exhaustive sparse pair enumeration at **cosine ≥0.80**. Found **21 flagged pairs**: 12 holdout–training, 3 holdout–anchor, 2 holdout–development, 2 holdout–pilot, and 2 within-holdout. No normalized cleaned-text exact duplicates or surviving prior D edges were reported.
+- Reconciled those 21 pairs with the earlier review register: **4 previously reviewed** (3 F, 1 R) and **17 not previously reviewed**. The team elected to **propose**, rather than execute, a conservative exclusion policy for the 17 unreviewed candidates: **9 additional unique holdout-replacement candidates** (seven protected-partition edges plus two internal-holdout pairs) and **8 unique training-exclusion candidates**. These similarity flags remain **unadjudicated** and must **not** be described as confirmed duplicates.
+
+### Methodological limitations and status
+- The advertisement-tail transformation is a **screening candidate**, not an approved universal preprocessing rule; aggressive truncation could remove relevant text. TF-IDF similarity thresholds are candidate-detection heuristics and do not prove the absence of semantic duplicates or all contamination.
+- The earlier 71-pair review decisions were preserved; reviewer independence was **not verified**. The 17 additional pairs were **not manually adjudicated**. The conservative policy is therefore a risk-reduction proposal with possible over-exclusion, not a human-validated duplicate classification.
+- All partition adjustments, exclusions, and replacements above are **in-memory proposals only**. **No source dataset was modified, no replacement/exclusion manifest was finalized, no private reference labels were accessed for these audits, and the holdout remains NOT FROZEN.** No main S-SLTE or baseline experiment was performed.
+- The notebook is available in the public repository. Its saved diagnostics include limited advertisement/article-text previews; do not publish private reviewer workbooks, source-reference labels, or identifiable confidential material.
+
+**Next:** implement and validate the additional conservative exclusions and deterministic replacement sampling; re-screen the complete proposed holdout and evaluate whether remaining risk is acceptable; document the final leakage policy and immutable partition manifests **before** freezing the holdout or conducting main experiments.
+
+---
+
 ## 2026-10-26 — Stage 7: Human Review Consensus and Draft Holdout Policy
 
 **Researchers:** Islam Uddin and Md Yousuf Bin Nazib.  
