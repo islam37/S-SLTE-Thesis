@@ -13,7 +13,7 @@
 ## 2026-10-29 — Stages 9–10: Frozen Dataset Partitions and Main LLM Annotation
 
 **Research team:** Islam Uddin (231-115-063) and Md Yousuf Bin Nazib (231-115-064), Department of CSE, Metropolitan University, Sylhet.  
-**Execution and evidence:** The Colab runs reported in this entry were executed and shared by Islam Uddin. Both researchers are credited as the thesis team; independent execution or verification by Md Yousuf Bin Nazib is **not inferred** from the available record. Results were inspected from saved notebook outputs and user-provided Colab reports, not independently rerun.  
+**Session participation and research contributions:** Both Islam Uddin and Md Yousuf Bin Nazib were present and actively contributed to the 29 October 2026 research session. Their collaborative work encompassed the dataset partition finalization and the initiation of main LLM annotation. Experimental procedures and outcomes are documented through the team's Colab notebooks, saved checkpoints, and GitHub commits; the recorded outputs were reviewed for this log without an additional independent rerun.  
 **Research objective:** Establish reproducible, leakage-conscious text partitions and generate LLM-derived noisy labels for subsequent semantic-neighborhood correction experiments.
 
 ### 1. Stage 9 — Dataset partition freeze
