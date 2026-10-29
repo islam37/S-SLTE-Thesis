@@ -4,9 +4,71 @@
 **Candidate method:** Semantic Label Trustworthiness Estimation (S-SLTE)  
 **Institution:** Metropolitan University, Sylhet — Department of Computer Science and Engineering  
 **Researchers:** Islam Uddin (231-115-063); Md Yousuf Bin Nazib (231-115-064)  
-**Target completion:** January 2027
+**Target completion:** January 2027 (overall research); **supervisor-ready draft milestone:** 16 November 2026
 
 > **Record-keeping policy:** Enter only work actually performed, observed results, decisions, blockers, and the next planned step. Do not report proposed methods as implemented or make performance claims before experiments. Record who performed or reviewed each task, and keep original reference labels outside the model-correction pipeline.
+
+---
+
+## 2026-10-29 — Stages 9–10: Frozen Dataset Partitions and Main LLM Annotation
+
+**Research team:** Islam Uddin (231-115-063) and Md Yousuf Bin Nazib (231-115-064), Department of CSE, Metropolitan University, Sylhet.  
+**Execution and evidence:** The Colab runs reported in this entry were executed and shared by Islam Uddin. Both researchers are credited as the thesis team; independent execution or verification by Md Yousuf Bin Nazib is **not inferred** from the available record. Results were inspected from saved notebook outputs and user-provided Colab reports, not independently rerun.  
+**Research objective:** Establish reproducible, leakage-conscious text partitions and generate LLM-derived noisy labels for subsequent semantic-neighborhood correction experiments.
+
+### 1. Stage 9 — Dataset partition freeze
+
+The team followed the documented conservative policy for resolving possible cross-partition near-duplicates in the AG News sample. The procedure used word-level TF-IDF unigram/bigram cosine similarity at a screening threshold of **0.80**, comparing original texts and an **experimental candidate-cleaned view**. Candidate flags were treated as screening evidence—not automatically as confirmed duplicate articles.
+
+- Resolved 17 previously unreviewed candidate relationships through conservative partition exclusions and replacement sampling; a full subsequent re-screen identified five additional candidate-cleaned flags, which were also conservatively resolved. No additional human adjudication is claimed.
+- Reconstructed a final active corpus of **19,921** records in five disjoint partitions: **2,000 clean anchor**, **1,800 development**, **500 pilot**, **13,621 main training**, and **2,000 correction holdout**.
+- The final screening reported **zero unresolved candidate pairs** at the selected threshold, **zero normalized exact-text duplicate records**, and **zero surviving previously adjudicated duplicate edges**. Of the remaining similarity flags, **17 raw-text** and **3 candidate-cleaned** pairs were all previously classified as **F (different)** or **R (related but distinct)**; none remained classified **D (duplicate)**.
+- Versioned partition identifiers and original-text fingerprints were saved privately as `configs/holdout_partition_manifest_v1.json`. The notebook reported `NEW_MANIFEST_SAVED`, followed by read-back verification. The original source CSVs were unchanged, and reference labels were not accessed in this audit.
+- The manifest recorded **26 holdout replacements** and **49 training exclusions** relative to the prior candidate populations. Frozen ID SHA-256 digests:
+
+| Frozen partition | Records | SHA-256 of record IDs |
+| --- | ---: | --- |
+| Correction holdout | 2,000 | `0c529eaddf7abfd977dcad8a1627bab1369460d5846370fe64304600506609c4` |
+| Main training | 13,621 | `ce13626940296ed9158f4dc116580987f404114f66d42fdc6dcc87acf7c62625` |
+
+**Reproducibility evidence:** [`notebooks/08_boilerplate_contamination_audit.ipynb`](../notebooks/08_boilerplate_contamination_audit.ipynb), committed as [`a525df43474361aafba2b7aae50a2dc4ad59f31e`](https://github.com/islam37/S-SLTE-Thesis/commit/a525df43474361aafba2b7aae50a2dc4ad59f31e). Partition IDs are considered **v1 frozen**; source-text cleaning was not adopted as a universal transformation. The private manifest, including record IDs, should not be pushed to the public repository.
+
+### 2. Stage 10 — Revision-pinned main LLM annotation
+
+A new Colab notebook validated **15,621 text-only annotation inputs** against the frozen ID and raw-text fingerprints: **13,621 main-training** and **2,000 holdout** examples. The annotation input excluded reference labels. The same model and prompt specification as the previously validated 500-item pilot were retained.
+
+| Parameter | Verified configuration |
+| --- | --- |
+| Annotator | `meta-llama/Llama-3.1-8B-Instruct` |
+| Model revision | `0e9e39f249a16976918f6564b8830bc894c89659` |
+| Prompt SHA-256 | `77a8d266f6f9d3e2dcdbeb906182e0d64f0836190fe84617a638d3ab3c5ed794` |
+| Decoding | `do_sample=False`, `max_new_tokens=32` |
+| Quantization and compute | 4-bit NF4; NVIDIA Tesla T4 (5.32 GB allocated VRAM upon loading) |
+| Reported library versions | `transformers==5.20.1`, `bitsandbytes==0.50.2` |
+| Checkpoint policy | Individual JSON records, text SHA-256, model/prompt verification, and atomic writes; original text preserved |
+
+**Observed execution results:**
+
+1. An eight-record smoke test (four training; four holdout) generated **8/8 JSON-valid responses**, persisted privately as `outputs/llm_main_v1/smoke_test_v1.json`.
+2. The first 100-record production batch yielded **100/100 JSON-valid responses** (92 new inferences and eight verified smoke-test reuses), with **zero invalid outputs** and a reported execution duration of **87.91 seconds**.
+3. The next checkpointed run generated **2,000 new responses**, yielding **2,100 saved record checkpoints in total** out of **15,621 expected** (**13.44%**). The final output reported **13,521 remaining**; **zero invalid outputs encountered in that run**; **50 previously saved checkpoints reverified within the run**; and **1,483.19 seconds** of execution time. Existing checkpoints were retained and only missing record predictions were generated.
+4. The Colab notebook was committed to [`notebooks/09_main_llm_annotation.ipynb`](../notebooks/09_main_llm_annotation.ipynb) in commit [`d11a962f054b59b0e11cf69b4e2ad9a1ce4cbbda`](https://github.com/islam37/S-SLTE-Thesis/commit/d11a962f054b59b0e11cf69b4e2ad9a1ce4cbbda). Raw per-record prediction JSON files remain in restricted Google Drive under `outputs/llm_main_v1/records/` and were **not** committed.
+
+### 3. Scientific interpretation and methodological safeguards
+
+- **JSON-format validity is not label accuracy.** No S-SLTE detection, label correction, baseline comparison, downstream classifier improvement, or statistical significance result is claimed at this stage.
+- TF-IDF screening does **not** guarantee the absence of all semantic duplicates or all possible leakage. Conservative removal of unadjudicated similar pairs may exclude genuinely distinct examples. The raw-versus-candidate-cleaned distinction must be preserved in reporting.
+- The partition manifest freezes the **record IDs and raw-text fingerprints** for v1; later substantive changes require explicit versioning and documentation rather than silent replacement.
+- Reference labels were not supplied to LLM annotation. Protected holdout reference labels, the retrospective pilot reference labels, and the official AG News test split must remain outside any annotation or correction-parameter selection procedure.
+- The project supervisor may review the methodology separately; this is not recorded as having been approved. The immediate experimental workflow need not be suspended solely because supervisor consultation has not yet occurred.
+
+### 4. Session handoff and next experimental milestone
+
+**Current validated state:** Stage 9 partition v1 frozen. Stage 10 annotation is **in progress**, with **2,100/15,621** prediction checkpoints saved according to the committed Colab output. Preserve existing checkpoint directories and the original manifest.
+
+**Next session:** Reconnect to Colab/T4, verify the frozen manifests and pinned model, and rerun the same resume-safe annotation cell. It must check existing record-level JSON files and generate only missing predictions. Once all **15,621** checkpoints exist, independently audit completeness, ID/text correspondence, model revision, prompt hash, decoding parameters, parser validity, and output distribution before consolidating the noisy-label table and proceeding to S-SLTE training, baselines, and ablation studies.
+
+**Draft milestone:** Prepare a reproducible, supervisor-ready thesis draft by **16 November 2026**; the earlier **January 2027** target remains the broader research-completion horizon unless formally revised.
 
 ---
 
