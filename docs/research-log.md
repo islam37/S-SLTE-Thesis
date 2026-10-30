@@ -10,6 +10,92 @@
 
 ---
 
+## 2026-10-30 — Stage 10 Completion, Full Annotation Audit and Stage 11 Data Validation
+
+**Research team:** Islam Uddin (231-115-063) and Md Yousuf Bin Nazib (231-115-064), Department of Computer Science and Engineering, Metropolitan University, Sylhet.  
+**Scope:** Joint thesis research progress on the AG News text-classification experiment; evidence is provided by the committed, executed Colab notebook and the team's reported private Google Drive outputs. The notebook's saved outputs were reviewed; no separate end-to-end reproduction of the private files is claimed.  
+**Objective:** Complete revision-pinned LLM labeling, independently audit saved predictions, export a reproducible noisy-label dataset, and initialize S-SLTE's next experimental phase.
+
+### 1. Stage 10 — Main LLM annotation completed
+
+The researchers resumed the frozen **v1** partition protocol from 29 October 2026. Input validation confirmed **13,621 training** and **2,000 correction-holdout** records (total **15,621**), consistent with the persisted partition IDs and original-text fingerprints. Reference labels were not part of the annotation inputs.
+
+The main annotator retained the pilot experiment's verified configuration:
+
+| Component | Recorded setting |
+| --- | --- |
+| Model | `meta-llama/Llama-3.1-8B-Instruct` |
+| Pinned model revision | `0e9e39f249a16976918f6564b8830bc894c89659` |
+| System-prompt SHA-256 | `77a8d266f6f9d3e2dcdbeb906182e0d64f0836190fe84617a638d3ab3c5ed794` |
+| Inference / decoding | Four-class, strict JSON; `do_sample=False`, `max_new_tokens=32` |
+| Runtime | Colab Tesla T4; 4-bit NF4; `transformers==5.20.1`; `bitsandbytes==0.50.2` |
+| Persistence | Resume-safe, per-record JSON checkpoints with text hash and configuration checks |
+
+Starting from the prior **2,100** saved checkpoints, the resumable batch procedure produced the remaining **13,521** model predictions across bounded executions (2,000 new predictions per run, with a final 1,521-item run). The final saved notebook output reported:
+
+- **15,621 / 15,621** total checkpoints saved (**100.00%**); **0** remaining.
+- Final invocation: **1,521 new predictions**, **14,100** prior checkpoints reverified, **15,621** records verified in that invocation, and **0** invalid outputs encountered.
+- Frozen partition manifest, model revision and annotation settings matched. The annotation procedure reported no reference-label access.
+
+This milestone completes **LLM annotation generation and checkpoint persistence**, not noise-correction evaluation or classification-accuracy measurement.
+
+### 2. Independent full-checkpoint integrity audit
+
+An additional notebook cell re-read **all 15,621** saved prediction JSON files, independently parsed the strict JSON labels, verified expected record-ID membership, source-text SHA-256, partition, model revision, prompt fingerprint, decoding parameters, label range and internal consistency, and checked for missing or unexpected record files.
+
+| Audit measure | Verified result |
+| --- | ---: |
+| Total checkpoints audited | 15,621 |
+| Main training | 13,621 |
+| Correction holdout | 2,000 |
+| Missing checkpoints | 0 |
+| Invalid prediction labels | 0 |
+| Audit status | `FULL_CHECKPOINT_AUDIT_PASSED` |
+
+**Observed LLM-predicted label distribution** (not reference-label accuracy):
+
+| Predicted AG News class | Training | Holdout |
+| --- | ---: | ---: |
+| World (0) | 4,199 | 629 |
+| Sports (1) | 3,532 | 520 |
+| Business (2) | 4,015 | 571 |
+| Sci/Tech (3) | 1,875 | 280 |
+| **Total** | **13,621** | **2,000** |
+
+The lower frequency of Sci/Tech predictions is a descriptive property of LLM outputs, **not evidence by itself of model bias, error rate, or S-SLTE effectiveness**.
+
+The final audit reported three new, private, non-overwriting artifacts in `MyDrive/S_SLTE_Thesis/outputs/llm_main_v1/`:
+
+- `training_annotations_v1.csv` — record IDs and LLM labels for 13,621 training examples.
+- `holdout_annotations_v1.csv` — record IDs and LLM labels for 2,000 protected holdout examples.
+- `full_annotation_audit_v1.json` — integrity metadata, class distribution and output fingerprints.
+
+The per-record prediction JSON files and frozen partition manifest remain in the restricted Google Drive workspace. They were **not** published to GitHub.
+
+**GitHub evidence:** [`notebooks/09_main_llm_annotation.ipynb`](../notebooks/09_main_llm_annotation.ipynb), committed in [`be94f907348591ca7ee4ff4f9e6fcc369d5d2bad`](https://github.com/islam37/S-SLTE-Thesis/commit/be94f907348591ca7ee4ff4f9e6fcc369d5d2bad). The committed notebook includes the final full-checkpoint audit output; inspection found no saved cell errors and no obvious embedded access tokens. This review does not constitute exhaustive secret detection.
+
+### 3. Stage 11 — S-SLTE foundation initialized
+
+A text/label-loading validation cell was executed successfully with the message `S-SLTE FOUNDATION — DATA VALIDATION PASSED`. It verified:
+
+- **2,000 clean-anchor** examples and **1,800 development** examples with trusted labels.
+- **13,621** training records matched one-to-one with the frozen LLM annotations.
+- Frozen ID and raw-text SHA-256 fingerprints matched, and the splits remained distinct.
+- The training-reference labels and protected holdout-reference labels were not loaded.
+- **No semantic embedding model, S-SLTE scores or corrections were generated yet.**
+
+For traceability, this validation cell is currently preserved as the final cell of the committed `09_main_llm_annotation.ipynb`. Subsequent Stage 11 research will be organized in a dedicated `10_s_slte_foundation.ipynb` notebook rather than extending Notebook 09.
+
+### 4. Scientific boundaries and next session
+
+- **Output validity is not prediction accuracy:** a 100% JSON-valid response rate establishes formatting and checkpoint integrity, not agreement with reference labels.
+- Preserve the **v1** dataset/annotation protocols. Do not train or calibrate with correction-holdout reference labels or the official AG News test labels; keep the official test split reserved for appropriate final evaluation.
+- On the next session (**31 October 2026**, planned), open or prepare `10_s_slte_foundation.ipynb`, reproduce the validated Stage 11 inputs, and load a **revision-pinned sentence-embedding model** using original texts. Next generate and verify semantic embeddings, establish leakage-safe nearest-neighbor evidence, then implement and evaluate S-SLTE scoring, calibration, baselines and ablations.
+- Save and validate new research artifacts before committing them; preserve private predictions, partition IDs and restricted labels outside the public repository.
+- **Supervisor-ready draft milestone:** **16 November 2026**. No correction, baseline superiority, uncertainty-calibration, or downstream-performance claim is made at this stage.
+
+---
+
 ## 2026-10-29 — Stages 9–10: Frozen Dataset Partitions and Main LLM Annotation
 
 **Research team:** Islam Uddin (231-115-063) and Md Yousuf Bin Nazib (231-115-064), Department of CSE, Metropolitan University, Sylhet.  
