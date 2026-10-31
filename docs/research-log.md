@@ -10,6 +10,67 @@
 
 ---
 
+## 2026-10-31 — Stage 11: Semantic Embeddings, KNN, Trustworthiness Evidence and Development Annotation Preparation
+
+**Research team:** Islam Uddin (231-115-063) and Md Yousuf Bin Nazib (231-115-064), Department of CSE, Metropolitan University, Sylhet.  
+**Scope:** Joint thesis research progress. This entry reports the executed notebook's saved outputs, checked against the GitHub commit; private Drive artifacts themselves were not independently downloaded or rerun by the GitHub reviewer.  
+**Notebook:** [`notebooks/10_s_slte_foundation.ipynb`](../notebooks/10_s_slte_foundation.ipynb) (commit [`fe361ee5fe0273becdbadfd0df878ddd5b05ceb7`](https://github.com/islam37/S-SLTE-Thesis/commit/fe361ee5fe0273becdbadfd0df878ddd5b05ceb7)). All 12 saved code-cell outputs (13 total cells including the Colab link) were inspected, and none reports an unhandled execution error. No obvious token values were found in the notebook's source/output review; that check does not establish exhaustive secret scanning.
+
+### 1. Frozen data and pinned sentence-embedding protocol
+
+- Restored the frozen partitions and validated raw-text and record-ID fingerprints: **2,000** clean anchors, **1,800** development articles, and **13,621** LLM-annotated training articles (**17,421** in total). The frozen correction holdout was excluded from this stage.
+- The saved main-annotation integrity report was checked before loading the training LLM-label CSV; training reference labels and holdout reference labels were not used.
+- Loaded `sentence-transformers/all-MiniLM-L6-v2` on Colab Tesla T4, pinned revision `1110a243fdf4706b3f48f1d95db1a4f5529b4d41`; `sentence-transformers==5.7.0`, `transformers==5.20.1`.
+- Original, unmodified text; normalized **384-dimensional** float32 embeddings; model maximum sequence length **256 tokens**. Smoke inference passed and the protocol was saved in `configs/s_slte_embedding_protocol_v1.json` within the restricted Drive workspace.
+- Successfully generated and validated embeddings for all three partitions (shapes **2,000 × 384**, **1,800 × 384**, **13,621 × 384**); saved them under `outputs/s_slte_embeddings_v1/` with an integrity manifest and SHA-256 file fingerprints.
+- Token-length audit of 17,421 articles found **9** texts exceeding the 256-token limit (anchor **1**, development **2**, training **6**), representing approximately **0.052%** overall. Those texts were not altered; the model's embeddings may omit content beyond its token limit.
+
+### 2. Exact clean-anchor semantic neighborhoods
+
+- Constructed exact cosine-similarity **top-K = 20** neighbors for each development and training query using **only 2,000 trusted clean-anchor vectors**; no candidate came from the development or training data.
+- Produced **1,800 development** and **13,621 training** neighbor lists: **15,421 × 20 = 308,420** neighbor entries.
+- Verified sorted neighbor similarities, matching clean-anchor label mappings, distinct neighbor IDs, frozen query IDs, and sampled cosine scores.
+- Stored `outputs/s_slte_knn_v1/` KNN artifacts and manifest, then computed `max(cosine, 0)`-weighted class-support scores for all queries. Every query had positive total neighbor similarity.
+
+### 3. Initial neighborhood evaluation and conflict-risk diagnostics
+
+With trusted **development labels** used solely for diagnostics, the top class from the weighted K=20 neighborhood achieved **1,590/1,800 = 88.3333% accuracy** and **0.8831 macro-F1**. This is a *20-neighbor weighted-vote top-class result*, not a single-nearest-neighbor result, and is **not** LLM correction performance.
+
+| Development class (450 each) | Correct | Recall / within-class accuracy |
+| --- | ---: | ---: |
+| World | 390 | 86.67% |
+| Sports | 439 | 97.56% |
+| Business | 384 | 85.33% |
+| Sci/Tech | 377 | 83.78% |
+
+The largest observed cross-class confusions were **Business → Sci/Tech: 52** and **Sci/Tech → Business: 40**. On development, selected neighborhood-prediction accuracy increased as support increased: at support **≥0.80**, **1,112** articles selected and **38** were incorrect (**96.58%** selected accuracy); at **≥0.90**, **768** selected and **12** incorrect (**98.44%** selected accuracy). Coverage necessarily decreased as the minimum support increased. These scores have **not** been calibrated as probabilities, and no final threshold was chosen.
+
+In the **13,621** noisy-label training examples, neighborhood top class agreed with the original LLM label for **11,031** records and differed for **2,590** (**19.01%**). These are *disagreements*, not established LLM errors. Conflicts by original LLM class: World **1,031/4,199**; Sports **170/3,532**; Business **1,209/4,015**; Sci/Tech **180/1,875**. For proposed destination classes, conflict candidates meeting neighbor top support **≥0.80** totaled **705**: World **10**, Sports **49**, Business **96**, Sci/Tech **550**. At **≥0.90**, **293** candidates remained (World **2**, Sports **32**, Business **38**, Sci/Tech **221**).
+
+Class-conditional development diagnostic error rates and Wilson interval endpoints were computed at support thresholds **0.70**, **0.80**, and **0.90**, with no correction or threshold selection. **Statistical terminology correction:** the code used `z=1.95996398454`; its reported upper endpoints are **two-sided 95% Wilson interval upper bounds** (equivalently one-sided 97.5% bounds), *not* one-sided 95% bounds. Moreover, ordinary development neighbor-classification risk is **not** the risk of replacing an LLM label specifically when LLM and neighbor labels disagree.
+
+### 4. Semantic label-trustworthiness evidence (uncalibrated)
+
+For each of **13,621** training articles, recorded the semantic support assigned to its **existing LLM label**, the top anchor-neighborhood destination class, and the gap between top support and LLM-label support. Files `outputs/s_slte_scores_v1/training_semantic_trust_scores_v1.csv` and `semantic_score_manifest_v1.json` were saved with source checksums.
+
+Mean LLM-label support was **0.848687** when the neighborhood agreed (**11,031** records) versus **0.207993** when it disagreed (**2,590** records). This separation is **expected by construction**, since both conflict and trustworthiness derive from the same neighborhood scores; it is **not independent proof** of correction efficacy.
+
+Exploratory candidate counts with minimum top supports **0.70 / 0.80 / 0.90** were **1,097 / 705 / 293** respectively. Additional minimum gap values **0.0 / 0.2 / 0.4** did not alter counts: these criteria are redundant for high-support class conflicts in the four-class normalized support vector. **No thresholds selected; no labels corrected.**
+
+### 5. Prepare a valid development correction-evaluation protocol
+
+Prepared a **text-only, frozen 1,800-record development annotation input** without development reference labels in inference input. Recorded the same pinned Llama annotation model (`meta-llama/Llama-3.1-8B-Instruct`, revision `0e9e39f249a16976918f6564b8830bc894c89659`) and prompt SHA-256 (`77a8d266f6f9d3e2dcdbeb906182e0d64f0836190fe84617a638d3ab3c5ed794`) in a versioned, restricted `outputs/llm_development_v1/development_annotation_manifest_v1.json` file. **Development LLM inference has not begun**, so no true before/after correction results, improvement, or superiority claims can yet be made.
+
+### 6. Session conclusion and next steps
+
+- **31 October session completed:** frozen data validation, embedding generation and truncation audit, exact top-20 KNN, neighbor evidence, clean-development diagnostics, conflict-risk diagnostics, uncalibrated semantic trustworthiness scoring, and development annotation preparation.
+- Outputs and manifests remain **private in Google Drive**; GitHub stores the reproducible Colab notebook, *not* bulk datasets, reference labels, model credentials, or prediction checkpoints.
+- **Next planned session: 1 November 2026.** Restore the runtime; use the pinned Llama annotator and exact frozen development text to generate/checkpoint **1,800 LLM predictions** with strict output auditing. Join those predictions to trusted development labels **only after inference**, and then design an explicit before/after correction-and-abstention evaluation on development. Do not use correction-holdout or official AG News test reference labels for selection or threshold calibration.
+- Calibration/selection must account for **conflict-conditioned** precision and risk, class imbalance, abstention coverage, baseline comparisons, and possible overfitting; preserve negative findings. Consider reserving a portion of development for unbiased rule evaluation if tuning multiple candidate thresholds.
+- **Supervisor-ready thesis draft milestone: 16 November 2026**; the substantive method and downstream evaluation remain incomplete.
+
+---
+
 ## 2026-10-30 — Stage 10 Completion, Full Annotation Audit and Stage 11 Data Validation
 
 **Research team:** Islam Uddin (231-115-063) and Md Yousuf Bin Nazib (231-115-064), Department of Computer Science and Engineering, Metropolitan University, Sylhet.  
