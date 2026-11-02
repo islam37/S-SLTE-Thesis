@@ -10,6 +10,64 @@
 
 ---
 
+## 2026-11-02 — Stage 12: Development LLM Annotation, Frozen S-SLTE Rule and Reserved-Development Evaluation
+
+**Research team:** Islam Uddin (231-115-063) and Md Yousuf Bin Nazib (231-115-064), Department of CSE, Metropolitan University, Sylhet.  
+**Scope and attribution:** Recorded as joint thesis progress; the Colab experiment and its reported outputs were submitted through Islam Uddin's session. Independent execution or review by Md Yousuf Bin Nazib is **not separately documented**.  
+**Notebook:** [`notebooks/10_s_slte_foundation.ipynb`](../notebooks/10_s_slte_foundation.ipynb), verified at commit [`49360d1e01727bea799fca74378124d6ed146d7e`](https://github.com/islam37/S-SLTE-Thesis/commit/49360d1e01727bea799fca74378124d6ed146d7e). The reviewer inspected the GitHub notebook's 25 cells (24 code cells), their saved outputs, and the commit metadata. No saved execution errors or obvious literal access tokens were found. Google Drive's private files were **not** independently opened or rerun in this review.
+
+### 1. Pinned model loading and development annotation
+
+- Restored the frozen **1,800 text-only development inputs**. Loaded `meta-llama/Llama-3.1-8B-Instruct` at revision `0e9e39f249a16976918f6564b8830bc894c89659`, using Colab Tesla T4, **4-bit NF4** (224 quantized layers, **5.32 GB** reported allocated VRAM), `transformers==5.20.1`, and `bitsandbytes==0.50.2`. The previous `hf_device_map` attribute assertion was replaced with device and quantized-layer checks; the final committed notebook has no saved exception.
+- Reused the frozen prompt fingerprint `77a8d266f6f9d3e2dcdbeb906182e0d64f0836190fe84617a638d3ab3c5ed794`; greedy decoding (`do_sample=False`, `max_new_tokens=32`), strict single-key `{"label": 0..3}` integer JSON parser.
+- The **8-record development smoke test** returned 8/8 valid JSON labels, and its responses were reused as checkpoints. The subsequent checkpointed production run completed **1,792 additional** annotations, for **1,800/1,800** development records.
+- A full record-level audit reported **zero missing and zero invalid predictions**, checking IDs, text SHA-256, model revision, prompt SHA-256, generation parameters, and smoke-response consistency. Label counts: World **545**, Sports **466**, Business **546**, Sci/Tech **243**. Output-only files (without reference labels): `outputs/llm_development_v1/development_annotations_v1.csv` and `development_annotation_audit_v1.json`, retained in private Google Drive. Development reference labels were **not** passed to LLM inference.
+
+### 2. Exploratory calibration protocol and conflict evidence
+
+- After the prior **full-development semantic-neighborhood diagnostics** (Stage 11), created a reproducible random record-ID split: **1,080 calibration records (60%)** and **720 reserved development-evaluation records (40%)**, seed **42**. The split used no reference labels, but the reserved subset is **not fully untouched**, given the earlier full-development exploration; avoid calling it an independent confirmatory test.
+- On calibration only, original LLM accuracy was **80.0926%** (**865/1,080**) with **0.7908 macro-F1**; clean-anchor K=20 weighted-neighborhood top-class accuracy was **87.8704%** (**949/1,080**).
+- There were **212** LLM/neighborhood conflicts: replacing all conflicts would have yielded **136 beneficial**, **52 harmful**, and **24 both-wrong** cases, producing **+84** net correct labels. These are retrospective calibration diagnostics, **not** the frozen correction result.
+- Compared **nine** candidate combinations of minimum top-class support (0.70, 0.80, 0.90) and minimum support gap (0.50, 0.65, 0.80), including class-conditional harm counts. Wilson upper limits used `z=1.95996`: **upper endpoints of two-sided 95% Wilson intervals**, without multiple-comparison adjustment.
+
+### 3. Freeze semantic-only conservative correction rule v1
+
+- Froze `S_SLTE_SEMANTIC_ONLY_CONSERVATIVE_RULE` with **clean-anchor K=20**, top neighborhood support **≥0.80**, and gap between top support and LLM-label support **≥0.50**, conditional on class disagreement. Otherwise retain the LLM label. Selection was **post hoc on the calibration subset** (not preregistered).
+- This selected rule corrected **52** calibration labels: **49 beneficial**, **3 harmful**, **0 both wrong**; **+46 net correct predictions**, or **+4.2593 percentage points** calibration accuracy (80.0926% → 84.3519%). Calibration beneficial fraction **94.23%**; observed harmful fraction **5.77%**, with unadjusted two-sided-95%-Wilson upper endpoint approximately **15.64%**.
+- Frozen configuration saved privately as `outputs/s_slte_calibration_v1/frozen_correction_rule_v1.json`; no noisy-training labels were modified.
+
+### 4. Apply rule before reference-label evaluation
+
+- Applied the unchanged rule to all **720** reserved development records without accessing reference labels during correction decisions. Of **137** LLM/neighborhood conflicts, **36** met the conservative rule; **101** conflicts abstained and **684** original LLM labels were retained overall.
+- Saved `outputs/s_slte_calibration_v1/evaluation_decisions_v1.csv` and `evaluation_decision_manifest_v1.json`, with fingerprints binding input annotations, neighborhood evidence, frozen rule, split, and decisions, **before** scoring with development reference labels.
+
+### 5. Reserved-development before/after evaluation
+
+Only after saving and verifying decisions, joined the **development** reference labels for retrospective scoring:
+
+| Metric | Original LLM | Corrected by frozen v1 | Difference |
+| --- | ---: | ---: | ---: |
+| Correct / 720 | 577 | 606 | **+29** |
+| Accuracy | 80.1389% | 84.1667% | **+4.0278 percentage points** |
+| Macro-F1 | 0.7947 | 0.8394 | **+0.0446** (rounded) |
+
+- Of **36** corrections, **32 beneficial**, **3 harmful**, **1 both wrong**. Beneficial fraction among corrected items: **88.89%**; harmful fraction **8.33%**. Corrected-record coverage **5.00%** of evaluation articles; conflict abstention **101/137 = 73.72%**.
+- Destination-class correction results: World **0**; Sports **5** (5 beneficial); Business **3** (2 beneficial, 1 harmful); Sci/Tech **28** (25 beneficial, 2 harmful, 1 both wrong). Effects are concentrated in Sci/Tech and are not established uniformly across classes.
+- Exact paired McNemar test on discordant correctness outcomes: **p = 4.17698 × 10⁻⁷**. Paired 10,000-resample bootstrap 95% interval for accuracy improvement: **+2.50 to +5.6944 percentage points**. These are exploratory-development statistical diagnostics and should not override the earlier-exploration caveat.
+- Evaluation report: `outputs/s_slte_calibration_v1/development_evaluation_report_v1.json` in private Google Drive. The final read-only audit reported verified rule/decision fingerprints, 1,800 annotations, 1,080/720 split, +29 net correct, no holdout reference-label access, no training-label changes, and no new inference.
+
+### 6. Research boundaries and next actions
+
+1. This is evidence of **development label correction**, **not** downstream text-classifier accuracy, independent holdout improvement, or superiority to a matched baseline. The development evaluation was reserved **after earlier full-development exploratory diagnostics**, so it is not a fully blind independent test.
+2. Do **not** modify frozen rule v1 based on the 720-record evaluation. Any new method or threshold variant requires its own versioned, clearly labeled exploratory protocol.
+3. Next: design and execute corrected-vs-original noisy-training label datasets using the frozen rule, then run matched downstream classifier comparisons (same architecture, seeds, data and budget), including an uncorrected LLM-label baseline and justified comparator methods.
+4. Preserve the 2,000-record correction holdout and official AG News test labels for their respective final evaluation roles; no retrospective tuning against them. Assess class-specific error/harm, abstention coverage, possible split-exploration contamination, and uncertainty.
+5. Prepare supervisor-facing Methodology, Results, and Limitations sections toward the **16 November 2026 supervisor-ready thesis draft** milestone. Seek and document supervisor and co-researcher review explicitly, rather than inferring approval.
+
+**Review boundary:** GitHub notebook source, saved outputs, and the commit were checked; reported private Google Drive manifest contents were **not independently fetched**. No private source text, model token, reference-label table, or bulk prediction checkpoint is committed with this research-log update.
+
+---
+
 ## 2026-10-31 — Stage 11: Semantic Embeddings, KNN, Trustworthiness Evidence and Development Annotation Preparation
 
 **Research team:** Islam Uddin (231-115-063) and Md Yousuf Bin Nazib (231-115-064), Department of CSE, Metropolitan University, Sylhet.  
