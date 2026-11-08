@@ -10,6 +10,57 @@
 
 ---
 
+## 2026-11-08 — Stage 13: Frozen Training-Label Correction and First Matched DistilBERT Pair
+
+**Research team:** Islam Uddin (231-115-063) and Md Yousuf Bin Nazib (231-115-064), Department of CSE, Metropolitan University, Sylhet.  
+**Attribution and review:** Joint thesis progress recorded from the Colab work and outputs shared by Islam Uddin. A separate execution or independent review by Md Yousuf Bin Nazib has **not** been documented in this session.  
+**Notebook:** [`notebooks/11_s_slte_downstream_evaluation.ipynb`](../notebooks/11_s_slte_downstream_evaluation.ipynb), verified at commit [`64941fd253be0e6fa631e3e0e6f09697b305f57b`](https://github.com/islam37/S-SLTE-Thesis/commit/64941fd253be0e6fa631e3e0e6f09697b305f57b). GitHub review inspected all **9 saved code cells**, their source and outputs: no saved execution-error outputs; both seed-42 training completion messages and matched-pair verification appear. No obvious literal Hugging Face/API tokens were detected in source-pattern review. Private Google Drive files and model weights were not independently downloaded, inspected, or rehashed by the GitHub reviewer.
+
+### 1. Restore frozen training subset and reuse the Stage 12 decision rule
+
+- Restored the Stage 11/12 frozen manifests and audited hashes. The original `data/splits/noisy_training.csv` has **16,200** rows, of which the **13,621 frozen active training IDs** were retained; **2,579** source rows are outside the frozen active subset. A preliminary assertion incorrectly expected 13,621 rows directly in the unfiltered file; corrected the notebook code to filter by manifest IDs, verify original-text fingerprints, and align LLM labels and KNN evidence.
+- Used the **unchanged, post-hoc-calibrated semantic-only S-SLTE v1 rule**, clean-anchor K=20, neighborhood top support **≥0.80**, support gap versus the original LLM label **≥0.50**, and a requirement that LLM and neighborhood class disagree.
+- From **2,590** LLM/neighborhood conflicts among the 13,621 training records, applied **705** label replacements (**5.18%** of training examples), retained **12,916** original LLM labels, and abstained on **1,885** conflicts. This is an **automatic correction-decision count**, not 705 independently verified correct labels.
+- Class counts before → after replacement: World **4,199 → 4,008**, Sports **3,532 → 3,542**, Business **4,015 → 3,662**, Sci/Tech **1,875 → 2,409**. Destinations of the 705 replacements: World **10**, Sports **49**, Business **96**, and Sci/Tech **550** (**78.01%**). The strong class-direction imbalance requires explicit reporting and downstream class-level checks.
+- Note on the frozen rule: with four nonnegative normalized class-support values, a class-conflict top support ≥0.80 entails a support gap ≥0.60, making the specified ≥0.50 gap criterion **redundant in these cases**. The selected rule was not retuned.
+- Private Drive outputs under `outputs/s_slte_training_correction_v1/`: `training_correction_decisions_v1.csv`, `training_corrected_labels_v1.csv`, and `training_correction_manifest_v1.json`; original LLM annotation files, training reference labels, and frozen holdout were not changed/accessed by correction code.
+
+### 2. Matched downstream input datasets
+
+- Generated `outputs/s_slte_downstream_v1/baseline_training_v1.csv` (original LLM targets) and `corrected_training_v1.csv` (S-SLTE targets), plus `matched_training_manifest_v1.json` with file SHA-256 fingerprints.
+- Verified **13,621 identical records in identical order and with exactly the same original text** for both conditions; **only 705 training target labels differ**. Neither CSV contains trusted/private reference labels as training targets.
+- Independently recomputed the 705 binary correction decisions from the saved KNN class-support vectors and frozen rule.
+
+### 3. Frozen classifier training protocol and readiness
+
+- Versioned `outputs/s_slte_downstream_v1/downstream_training_protocol_v1.json` before model training. Pretrained architecture `distilbert/distilbert-base-uncased`, pinned checkpoint revision `12040accade4e8a0f71eabdb258fecc2e7e948be`; four output classes.
+- Matched conditions **baseline vs corrected**, planned random seeds **42, 123, 2026**, **2 epochs**, batch size **16**, gradient accumulation **2**, AdamW, learning rate **2e-5**, weight decay **0.01**, warmup ratio **0.06**, linear scheduler, maximum length **256**, final-epoch checkpoint, and no early stopping. Six runs are planned; only seed **42** was finished this session.
+- A Colab runtime change temporarily lost the Drive mount; recovered the existing frozen protocol without recreating it. Tesla T4 readiness test loaded the pinned base checkpoint and new four-class head; 4-example forward pass yielded finite logits of shape **(4, 4)**. A missing task-specific classification head and unused masked-LM head weights on loading the base model are expected for this model transfer, not a training failure.
+
+### 4. Completed seed-42 matched classifier training
+
+| Training condition | Seed | Epoch 1 loss | Epoch 2 loss | Optimizer updates | Status |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Original LLM-label baseline | 42 | 0.451491 | 0.230441 | 852 | Completed |
+| Frozen S-SLTE corrected labels | 42 | 0.394695 | 0.171706 | 852 | Completed after in-memory recovery |
+
+- Both trained on the same 13,621 original articles for **2 epochs** with **852 optimizer updates**, including **52 warmup updates**, and matching seed/protocol/checkpoint revision. Final `model.safetensors`, tokenizer/config, and training summaries were reported saved under `outputs/s_slte_downstream_v1/training_runs/baseline_seed_42/` and `corrected_seed_42/` in private Drive.
+- The corrected run was interrupted during checkpoint saving at **update 700**, with a `KeyboardInterrupt` inside a repeated SHA-256 read of Google Drive input files. The initial attempted caching fix did not take effect; a revised, complete notebook cell eliminated repeated per-checkpoint hashing and added local serialization plus atomic Drive copy. The model, optimizer, scheduler, data ordering and loss counters were recovered **in memory** at update **700**; training continued to **852**, producing a saved result with `recovery_mode=IN_MEMORY`. This interruption and recovery are part of the experiment history even though the committed notebook retains clean final saved outputs.
+- A subsequent read-only matched-pair check verified both reported completion summaries, epochs, update counts, model configuration (`num_labels=4` via Hugging Face `AutoConfig`), pinned pretrained revision, seed and protocol fingerprints. Saved weight files were confirmed present but **not independently rehashed** by that verification.
+- The lower corrected-condition **training loss cannot be interpreted as improved reference-label accuracy, generalization, or method superiority**. No classifier validation, holdout scoring, or original-vs-corrected downstream accuracy comparison occurred.
+
+### 5. Research integrity, limitations and next steps
+
+1. **Completed:** Frozen train subset restoration; 705 conservative correction decisions; matched training-target datasets; fixed downstream training protocol; both seed-42 training runs and their summary-level verification. This is **2 of 6 planned runs**, not completion of Stage 13 or a full experiment.
+2. **Not completed:** Seeds **123** and **2026** (four model runs); downstream holdout Macro-F1/accuracy; per-class downstream comparisons; uncertainty across seeds; other comparator methods; supervisor review.
+3. **Research caveats:** Stage 12 rule was chosen on exploratory development calibration after earlier full-development neighborhood diagnostics; the reserved development subset was not fully independent. Do not retune v1 on observed validation/holdout results. Class imbalance in corrections (especially Sci/Tech) must be assessed explicitly. The two training conditions use generated labels, not trusted reference-label training targets.
+4. **Next session:** Run and audit the two matched conditions at seed 123, then seed 2026, using an updated reusable checkpointing implementation that computes source hashes once and records resumptions without changing frozen hyperparameters. Perform the previously frozen, one-time holdout evaluation only after the six training runs are complete, keeping the holdout out of tuning.
+5. **Milestone:** Draft Methodology, preliminary findings, limitations and experiment status for supervisor review by **16 November 2026**; report incomplete comparisons rather than anticipating an improvement.
+
+**Verification boundary:** The GitHub notebook/commit and saved Colab outputs were checked. The restricted Drive manifests, actual checkpoint weights, and their on-disk hashes were **not independently audited by the GitHub reviewer**.
+
+---
+
 ## 2026-11-02 — Stage 12: Development LLM Annotation, Frozen S-SLTE Rule and Reserved-Development Evaluation
 
 **Research team:** Islam Uddin (231-115-063) and Md Yousuf Bin Nazib (231-115-064), Department of CSE, Metropolitan University, Sylhet.  
