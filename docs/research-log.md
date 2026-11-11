@@ -10,6 +10,91 @@
 
 ---
 
+## 2026-11-11 — Stage 13: Completed Six-Run DistilBERT Experiment, Frozen Holdout Evaluation and Paired Statistical Analysis
+
+**Research team:** Islam Uddin (231-115-063) and Md Yousuf Bin Nazib (231-115-064), Department of CSE, Metropolitan University, Sylhet.  
+**Attribution:** Experimental execution and results were reported from the Colab notebook through Islam Uddin. The work belongs to the joint thesis, but independent execution, metric checking or review by Md Yousuf Bin Nazib has **not** been separately documented.  
+**Verified GitHub notebook:** [`notebooks/11_s_slte_downstream_evaluation.ipynb`](../notebooks/11_s_slte_downstream_evaluation.ipynb), [commit `1b83c44d9dabbf3137df9d9c04be9bcb473da718`](https://github.com/islam37/S-SLTE-Thesis/commit/1b83c44d9dabbf3137df9d9c04be9bcb473da718), message `Complete Stage 13 frozen holdout evaluation and statistical analysis`. The GitHub notebook contains **20 cells** (19 code, one Colab-link markdown), **zero saved execution-error outputs**, and saved completion outputs for all six model trainings, final training audit, holdout preparation, six-model evaluation, statistical analysis and final summary verification. Prior preparatory/training cells have preserved outputs but some blank execution counts following notebook copy; later audit/evaluation cells have execution counts 1–5. Source and saved outputs were reviewed for obvious literal Hugging Face/OpenAI/GitHub/Google API token strings; none were found. The notebook references the restricted private reference *path* in its evaluation code, but no raw reference-label table or holdout article text appears in its saved outputs. This is a **notebook/output review**, not an independent execution of the private Drive experiments.
+
+### 1. Frozen protocol, six completed matched runs, and artifact gate
+
+- The original, unchanged S-SLTE v1 correction rule selected at Stage 12 and applied on 8 November yielded **705 automatic training-target replacements** among **13,621** frozen active records, with identical original training texts and record IDs in the two matched conditions. The replacements are **not** 705 independently verified true corrections. Of the 705 destination labels, **550** (**78.01%**) were Sci/Tech; see per-class caveat below.
+- Training compared original Llama-generated labels (**baseline**) versus frozen S-SLTE-corrected labels (**corrected**). Both conditions used `distilbert/distilbert-base-uncased` pinned at revision `12040accade4e8a0f71eabdb258fecc2e7e948be`, identical texts/order, seeds **42, 123, 2026**, 2 epochs per run, batch size 16, gradient accumulation 2, AdamW with learning rate `2e-5`, decay `0.01`, 6% linear warmup, length 256 and final-epoch model selection only. **852 optimizer steps** and **52 warmup steps** were reported for each run. GPU: Colab Tesla T4.
+- On 11 November, the existing seed-42 pair was retained; four additional training runs (baseline and corrected, seeds 123 and 2026) completed. The reusable training cell cached frozen source fingerprints once, used temporary local checkpoint serialization plus Drive copy, and reported `recovery_mode=FRESH` for these four runs. Seed-42 corrected retains its **8 November in-memory recovery at update 700**, as documented in the earlier log.
+
+| Seed | Condition | Epoch 1 mean training loss | Epoch 2 mean training loss | Optimizer updates | Outcome |
+| --- | --- | ---: | ---: | ---: | --- |
+| 42 | Baseline | 0.451491 | 0.230441 | 852 | Completed 8 November |
+| 42 | Corrected | 0.394695 | 0.171706 | 852 | Completed 8 November; in-memory recovery |
+| 123 | Baseline | 0.458791 | 0.228704 | 852 | Completed 11 November, fresh |
+| 123 | Corrected | 0.404000 | 0.168965 | 852 | Completed 11 November, fresh |
+| 2026 | Baseline | 0.458585 | 0.224221 | 852 | Completed 11 November, fresh |
+| 2026 | Corrected | 0.402684 | 0.170546 | 852 | Completed 11 November, fresh |
+
+- Step 14 final training-integrity audit reported **6/6** completed model summaries, correct four-class DistilBERT model configuration, expected classifier tensor shape `[4, 768]`, source and protocol SHA-256 consistency, same controls per seed pair, identical matched input record IDs and texts, and exactly **705** target differences. The script inspected weight-file existence and tensor structure, **not** an independent SHA-256 of every saved `model.safetensors` file; thus weight-by-weight/bitwise reproduction is **not claimed**.
+- Private report: `outputs/s_slte_downstream_v1/final_training_audit_v1.json`. No holdout reference labels were used during training or its audit.
+
+### 2. Frozen internal holdout integrity and one-time downstream evaluation
+
+- After the six-run gate passed, Step 15A reconstructed the **2,000-record frozen holdout** from `configs/holdout_partition_manifest_v1.json` and the original, text-only `data/splits/noisy_training.csv`. It checked record-ID and raw-text fingerprints, no overlap with the active training set or other listed partitions, and exact original-text alignment with the **restricted** `private_reference/noisy_reference.csv` labels. These reference labels were accessed **for evaluation only**, after all six runs completed. This holdout is a curated **internal partition of the AG News training-source population**, not the official AG News external test set.
+- Step 15B loaded each final model in inference mode on the same frozen texts (batch size 32; maximum length 256), saved six prediction-only files with record IDs but no reference labels in the restricted private Drive `outputs/s_slte_downstream_v1/holdout_evaluation_v1/`, and verified their prediction manifests/fingerprints. It then scored holdout accuracy, four-class Macro-F1, and per-class precision/recall/F1.
+- The frozen protocol's **primary metric was holdout Macro-F1**; accuracy and per-class P/R/F1 were secondary. No training, threshold tuning, classifier selection, hyperparameter change, or correction-rule revision occurred using this holdout.
+
+### 3. Pre-specified primary and secondary evaluation results
+
+| Seed | Baseline Macro-F1 | Corrected Macro-F1 | Paired F1 gain | Baseline accuracy | Corrected accuracy | Accuracy gain (pp) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 42 | 0.806759 | 0.853293 | +0.046533 | 81.25% | 85.50% | +4.25 |
+| 123 | 0.826291 | 0.857178 | +0.030887 | 83.00% | 85.85% | +2.85 |
+| 2026 | 0.824367 | 0.859104 | +0.034737 | 82.85% | 86.05% | +3.20 |
+
+- **Mean Macro-F1:** baseline **0.819139** versus corrected **0.856525**; **mean paired absolute gain +0.037386** (approximately **+3.74 F1 points on a 0–100 scale**). The sample **SD of the three paired Macro-F1 gains** is **0.008152**. These are absolute score differences, not a claim of 3.74% relative improvement.
+- **Mean holdout accuracy gain:** **+3.4333 percentage points** across matched seeds; **sample SD 0.7286 percentage points**. Macro-F1 and accuracy improvements are positive for **all three seed pairs**.
+- Frozen evaluation source reports: `holdout_model_metrics_v1.csv`, `holdout_per_class_metrics_v1.csv`, and `holdout_paired_effects_v1.csv` in the private `holdout_evaluation_v1/` directory. These are aggregate outputs; source prediction files contain ID plus prediction only.
+
+### 4. Paired inference and per-class analysis
+
+- Exact two-sided McNemar tests compared paired correctness (baseline vs corrected) on the **same 2,000 holdout examples**, separately for each seed. The count **helped** is baseline wrong/corrected right; **harmed** is baseline right/corrected wrong. Three p-values were adjusted by the Holm multiple-testing method. **These tests address paired accuracy errors, not Macro-F1 directly.**
+
+| Seed | Helped | Harmed | Discordant | Exact McNemar p | Holm-adjusted p |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 42 | 102 | 17 | 119 | 5.86012e-16 | 1.75804e-15 |
+| 123 | 72 | 15 | 87 | 4.26054e-10 | 4.26054e-10 |
+| 2026 | 80 | 16 | 96 | 2.07441e-11 | 4.14882e-11 |
+
+- A **5,000-resample paired bootstrap** (RNG seed `20261111`) sampled **holdout records** with replacement, used the **same sampled record indices across all six models**, recomputed each matched-seed Macro-F1 difference, then averaged the three differences. The reported percentile **95% interval for the mean paired Macro-F1 improvement** was **[+0.028502, +0.046546]**. This is **conditional on the three trained seed pairs** and the internal held-out record population: it is **not** an uncertainty interval over independent new random training seeds, architectures, datasets or domains, nor a guarantee of universal performance.
+- Mean per-class F1 across three seed pairs, evaluated on the same holdout:
+
+| Class | Support | Baseline mean F1 | Corrected mean F1 | Mean absolute F1 gain |
+| --- | ---: | ---: | ---: | ---: |
+| World | 476 | 0.824873 | 0.837224 | +0.012351 |
+| Sports | 503 | 0.956581 | 0.965473 | +0.008892 |
+| Business | 510 | 0.777818 | 0.821206 | +0.043388 |
+| Sci/Tech | 511 | 0.717284 | 0.802197 | +0.084913 |
+
+- All four classes show positive *mean* F1 changes. Sci/Tech has the largest observed class gain (**+0.084913**), followed by Business (**+0.043388**). **550/705** training replacements were directed to Sci/Tech, but this association **does not by itself establish a causal explanation** for the class-level outcome; class frequency shifts and precision/recall tradeoffs should be inspected before causal interpretation.
+- Saved private statistical outputs: `holdout_seed_statistical_tests_v1.csv`, `holdout_per_class_comparison_v1.csv`, `holdout_class_summary_v1.csv`, and `holdout_statistical_report_v1.json`.
+
+### 5. Final consistency verification, interpretation and research boundaries
+
+- Step 17 reloaded the **saved aggregate reports** (not the private ground-truth record table), reproduced the paired means and class-level consistency checks, confirmed positive differences for all three seeds and Holm-adjusted McNemar p-values below 0.001, and generated the aggregate-only report `outputs/s_slte_downstream_v1/holdout_evaluation_v1/holdout_results_summary_v1.md` with status `NEW_SAVED`. Notebook output: **`STATUS: STAGE 13 FINAL RESULTS VERIFIED`**.
+- **Supported claim:** On this frozen 2,000-example internal AG News holdout, using the specified DistilBERT setup and three paired seeds, training on automatically S-SLTE-corrected LLM targets produced **higher mean Macro-F1 and accuracy** than training on uncorrected LLM targets. This is evidence for this precise experimental comparison, **not** confirmation of superiority to all noisy-label methods or improvement in all settings.
+- **Limits to report explicitly:** only **one architecture and one corpus**, **three seeds**, internal rather than independent external-domain holdout, no other downstream baseline/correction families tested in this six-run comparison, no label-level verification of the 705 replacements, and potential training nondeterminism across hardware/versions despite pinned pretrained revision and seeds. The Stage 12 reserved-development assessment was **not fully independent** because earlier exploratory neighbor diagnostics examined the full development set before that split. The original holdout was text-audited/deduplicated before final freeze; no holdout label tuning is recorded. Do not present the reserved-development result as a pristine external test.
+- **Privacy and artifact boundary:** Private reference labels stayed in restricted Drive during scoring. Notebook source contains a private reference **file path** (required to reproduce evaluation with authorized access), but the reviewed saved outputs contain **aggregate scores only**, no printed per-record true labels or article text. No obvious literal access credentials detected by pattern review. The notebook/commit review **did not independently mount or inspect Drive, rerun six models, or verify the full saved weight digests**; these are notebook-reported and notebook-code-validated results.
+- The six-run primary frozen holdout comparison is **complete**. Additional experiments, if undertaken, must be called exploratory/secondary and must **not** retune v1 on this now-exposed holdout. Thesis interpretation should separate primary results from follow-on analyses.
+
+### 6. Next actions and near-term milestone
+
+1. Prepare supervisor-ready **Methodology, Experimental Setup, Results, Statistical Analysis, Discussion, Threats to Validity and Limitations** using the pinned sources and the complete paired result table; preserve **16 November 2026** as the supervisor-ready draft milestone.
+2. Review confusion matrices and class-level precision/recall from already saved holdout predictions only for **descriptive explanation**, without selecting/retraining variants based on these observations.
+3. Cross-check the final narrative with both researchers and the supervisor; identify any unverified authorship/contribution claims rather than inventing them.
+4. If further baselines or an independent dataset evaluation are later performed, freeze an explicit **new evaluation protocol** and report them separately as follow-on investigations, rather than retroactively expanding the frozen primary claim.
+5. Keep the complete Colab notebook in GitHub and private reference/prediction artifacts and large model weights outside the public repository. No new GitHub copy of the private result files was made during this log update.
+
+**Stage status at end of 11 November 2026:** **Stage 13 main six-run downstream comparison and frozen holdout analysis completed**; supervisor-ready writing, independent review, and broader experimental validation **remain pending**.
+
+---
+
 ## 2026-11-08 — Stage 13: Frozen Training-Label Correction and First Matched DistilBERT Pair
 
 **Research team:** Islam Uddin (231-115-063) and Md Yousuf Bin Nazib (231-115-064), Department of CSE, Metropolitan University, Sylhet.  
